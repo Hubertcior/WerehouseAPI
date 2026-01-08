@@ -19,15 +19,15 @@ namespace WerehouseAPI.Controllers
         public async Task<ActionResult<GetPackageDto>> GetById(int id)
         {
             var packageDto = await _context.Packages
-                .Where(p => p.Id == id) 
-                .Select(p => new GetPackageDto 
+                .Where(p => p.Id == id)
+                .Select(p => new GetPackageDto
                 {
                     Serial = p.SerialNumber,
                     Height = p.Height,
                     Id = p.Id,
                     Weight = p.Weight,
                     Price = p.Price,
-                    Status = p.Status.Name, 
+                    Status = p.Status.Name,
 
                     Sender = new GetSenderDto
                     {
@@ -44,7 +44,7 @@ namespace WerehouseAPI.Controllers
                         City = p.Receiver.City
                     }
                 })
-                .FirstOrDefaultAsync(); 
+                .FirstOrDefaultAsync();
 
             if (packageDto == null)
             {
@@ -57,7 +57,7 @@ namespace WerehouseAPI.Controllers
         public async Task<IActionResult> CreateOrder(CreateOrderDto dto)
         {
             var sender = await _context.Senders.FindAsync(dto.SenderId);
-            if(sender == null)
+            if (sender == null)
             {
                 return NotFound($"Sender {dto.SenderId} does not exist");
             }
@@ -73,7 +73,7 @@ namespace WerehouseAPI.Controllers
 
                 SenderId = dto.SenderId,
 
-                Receiver = new Receiver 
+                Receiver = new Receiver
                 {
                     Name = dto.Receiver.Name,
                     Surname = dto.Receiver.Surname,
@@ -97,6 +97,23 @@ namespace WerehouseAPI.Controllers
             }
 
             return StatusCode(500, "Error while creating order");
+        }
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> ChangeStatus(int id, UpdatePackageStatusDto dto)
+        {
+            var package = await _context.Packages.FindAsync(id);
+            if(package == null)
+            {
+                return NotFound($"We can't find {id} package");
+            }
+            var statusExist = await _context.PackageStatuses.AnyAsync(s => s.Id == dto.NewStatusId);
+            if (!statusExist)
+            {
+                return BadRequest("We can't set this status!");
+            }
+            package.StatusId = dto.NewStatusId;
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
     }
 }
