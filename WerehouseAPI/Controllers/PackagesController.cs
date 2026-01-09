@@ -3,6 +3,7 @@ using WerehouseAPI.Data;
 using WerehouseAPI.Dtos;
 using Microsoft.EntityFrameworkCore;
 using WerehouseAPI.Entities;
+using WerehouseAPI.Repositories;
 
 namespace WerehouseAPI.Controllers
 {
@@ -10,17 +11,17 @@ namespace WerehouseAPI.Controllers
     [ApiController]
     public class PackagesController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        public PackagesController(AppDbContext context)
+        private readonly IPackageRepository _repository;
+        public PackagesController(IPackageRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
         [HttpGet("{id}")]
         public async Task<ActionResult<GetPackageDto>> GetById(int id)
         {
-            var packageDto = await _context.Packages
-                .Where(p => p.Id == id)
-                .Select(p => new GetPackageDto
+            var packages = await _repository.GetAllAsync();
+
+            var dtos = packages.Select(p => new GetPackageDto
                 {
                     Serial = p.SerialNumber,
                     Height = p.Height,
@@ -43,21 +44,14 @@ namespace WerehouseAPI.Controllers
                         Surname = p.Receiver.Surname,
                         City = p.Receiver.City
                     }
-                })
-                .FirstOrDefaultAsync();
-
-            if (packageDto == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(packageDto);
+                });
+            return Ok(dtos);
         }
         [HttpPost]
         public async Task<IActionResult> CreateOrder(CreateOrderDto dto)
         {
-            var sender = await _context.Senders.FindAsync(dto.SenderId);
-            if (sender == null)
+            var sender = await _repository.SenderExistsAsync(dto.SenderId);
+            if (!sender)
             {
                 return NotFound($"Sender {dto.SenderId} does not exist");
             }
@@ -85,8 +79,7 @@ namespace WerehouseAPI.Controllers
                 }
             };
 
-            _context.Packages.Add(newPackage);
-            await _context.SaveChangesAsync();
+            await _repository.AddAsync(newPackage); 
             var result = await GetById(newPackage.Id);
 
             if (result.Result is OkObjectResult okResult)
@@ -101,18 +94,16 @@ namespace WerehouseAPI.Controllers
         [HttpPut("{id}/status")]
         public async Task<IActionResult> ChangeStatus(int id, UpdatePackageStatusDto dto)
         {
-            var package = await _context.Packages.FindAsync(id);
-            if(package == null)
-            {
-                return NotFound($"We can't find {id} package");
-            }
-            var statusExist = await _context.PackageStatuses.AnyAsync(s => s.Id == dto.NewStatusId);
-            if (!statusExist)
-            {
-                return BadRequest("We can't set this status!");
-            }
+            var package = await _repository.GetByIdAsync(id);
+            if (package == null) return NotFound("Nie znaleziono paczki.");
+
+            if (!await _repository.StatusExistsAsync(dto.NewStatusId))
+                return BadRequest("Zły status.");
+
             package.StatusId = dto.NewStatusId;
-            await _context.SaveChangesAsync();
+
+            await _repository.UpdateAsync(package);
+
             return NoContent();
         }
     }

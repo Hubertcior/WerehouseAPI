@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WerehouseAPI.Data;
+using WerehouseAPI.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IPackageRepository, PackageRepository>();
 
 
 builder.Services.AddDbContext<AppDbContext>(o =>
