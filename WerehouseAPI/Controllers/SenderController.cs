@@ -2,6 +2,7 @@
 using WerehouseAPI.Data;
 using WerehouseAPI.Dtos;
 using WerehouseAPI.Entities;
+using WerehouseAPI.Repositories;
 
 namespace WerehouseAPI.Controllers
 {
@@ -9,16 +10,16 @@ namespace WerehouseAPI.Controllers
     [ApiController]
     public class SenderController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        public SenderController(AppDbContext context)
+        private readonly ISenderRepository _repository;
+        public SenderController(ISenderRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var sender = await _context.Senders.FindAsync(id);
+            var sender = await _repository.GetSenderByIdAsync(id);
             if(sender == null)
             {
                 return NotFound();
@@ -39,9 +40,7 @@ namespace WerehouseAPI.Controllers
                 PostalCode = dto.PostalCode,
             };
 
-            _context.Senders.Add(newSender);
-
-            await _context.SaveChangesAsync();
+            await _repository.AddAsync(newSender);
             return CreatedAtAction(nameof(GetById), new {id = newSender.Id}, newSender);
         }
     }
