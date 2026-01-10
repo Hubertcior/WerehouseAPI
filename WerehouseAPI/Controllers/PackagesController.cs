@@ -4,6 +4,7 @@ using WerehouseAPI.Dtos;
 using Microsoft.EntityFrameworkCore;
 using WerehouseAPI.Entities;
 using WerehouseAPI.Repositories;
+using AutoMapper;
 
 namespace WerehouseAPI.Controllers
 {
@@ -12,84 +13,40 @@ namespace WerehouseAPI.Controllers
     public class PackagesController : ControllerBase
     {
         private readonly IPackageRepository _repository;
-        public PackagesController(IPackageRepository repository)
+        private readonly IMapper _mapper;
+        public PackagesController(IPackageRepository repository, IMapper mapper)
         {
             _repository = repository;
+            _mapper = mapper;
+
         }
         [HttpGet("{id}")]
         public async Task<ActionResult<GetPackageDto>> GetById(int id)
         {
-            var packages = await _repository.GetAllAsync();
+            var package = await _repository.GetAllAsync();
 
-            var dtos = packages.Select(p => new GetPackageDto
-                {
-                    Serial = p.SerialNumber,
-                    Height = p.Height,
-                    Id = p.Id,
-                    Weight = p.Weight,
-                    Price = p.Price,
-                    Status = p.Status.Name,
+            if (package == null) return NotFound();
 
-                    Sender = new GetSenderDto
-                    {
-                        Id = p.Sender.Id,
-                        Name = p.Sender.Name,
-                        Surname = p.Sender.Surname,
-                        City = p.Sender.City
-                    },
-                    Receiver = new GetSenderDto
-                    {
-                        Id = p.Receiver.Id,
-                        Name = p.Receiver.Name,
-                        Surname = p.Receiver.Surname,
-                        City = p.Receiver.City
-                    }
-                });
-            return Ok(dtos);
+            var dto = _mapper.Map<GetPackageDto>(package);
+
+            return Ok(dto);
         }
         [HttpPost]
         public async Task<IActionResult> CreateOrder(CreateOrderDto dto)
         {
             var sender = await _repository.SenderExistsAsync(dto.SenderId);
-            if (!sender)
-            {
-                return NotFound($"Sender {dto.SenderId} does not exist");
-            }
+            if (!sender) return NotFound($"Sender {dto.SenderId} does not exist");
 
-            var newPackage = new Package
-            {
-                SerialNumber = Guid.NewGuid().ToString(),
-                Weight = dto.Weight,
-                Height = dto.Height,
-                Price = dto.Price,
-                CreatedDate = DateTime.UtcNow,
-                StatusId = 1,
+            var newPackage = _mapper.Map<Package>(dto);
+            newPackage.SerialNumber = Guid.NewGuid().ToString();
+            newPackage.CreatedDate = DateTime.UtcNow;
+            newPackage.StatusId = 1;
 
-                SenderId = dto.SenderId,
+            await _repository.AddAsync(newPackage);
+            var packageFromDb = await _repository.GetByIdAsync(newPackage.Id);
+            var responseDto = _mapper.Map<GetPackageDto>(packageFromDb);
 
-                Receiver = new Receiver
-                {
-                    Name = dto.Receiver.Name,
-                    Surname = dto.Receiver.Surname,
-                    Email = dto.Receiver.Email,
-                    PhoneNumber = dto.Receiver.PhoneNumber,
-                    City = dto.Receiver.City,
-                    Street = dto.Receiver.Street,
-                    PostalCode = dto.Receiver.PostalCode
-                }
-            };
-
-            await _repository.AddAsync(newPackage); 
-            var result = await GetById(newPackage.Id);
-
-            if (result.Result is OkObjectResult okResult)
-            {
-                var createdDto = okResult.Value;
-
-                return CreatedAtAction(nameof(GetById), new { id = newPackage.Id }, createdDto);
-            }
-
-            return StatusCode(500, "Error while creating order");
+            return CreatedAtAction(nameof(GetById), new { id = newPackage.Id }, responseDto);
         }
         [HttpPut("{id}/status")]
         public async Task<IActionResult> ChangeStatus(int id, UpdatePackageStatusDto dto)

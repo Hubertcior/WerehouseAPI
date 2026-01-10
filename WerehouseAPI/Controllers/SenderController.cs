@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using WerehouseAPI.Data;
 using WerehouseAPI.Dtos;
 using WerehouseAPI.Entities;
@@ -11,9 +12,11 @@ namespace WerehouseAPI.Controllers
     public class SenderController : ControllerBase
     {
         private readonly ISenderRepository _repository;
-        public SenderController(ISenderRepository repository)
+        private readonly IMapper _mapper;
+        public SenderController(ISenderRepository repository, IMapper mapper)
         {
             _repository = repository;
+            _mapper = mapper;
         }
 
         [HttpGet("{id}")]
@@ -29,19 +32,13 @@ namespace WerehouseAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSenderDto dto)
         {
-            var newSender = new Sender
-            {
-                Name = dto.Name,
-                Surname = dto.Surname,
-                Email = dto.Email,
-                PhoneNumber = dto.PhoneNumber,
-                City = dto.City,
-                Street = dto.Street,
-                PostalCode = dto.PostalCode,
-            };
-
+            var newSender = _mapper.Map<Sender>(dto);
+    
             await _repository.AddAsync(newSender);
-            return CreatedAtAction(nameof(GetById), new {id = newSender.Id}, newSender);
+
+            var responseDto = _mapper.Map<GetSenderDto>(newSender);
+
+            return CreatedAtAction(nameof(GetById), new {id = newSender.Id}, responseDto);
         }
     }
 }
