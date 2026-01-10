@@ -13,6 +13,7 @@ namespace WerehouseAPI.Mappings
             CreateMap<Package, GetPackageDto>().ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.Name));
             CreateMap<Sender, GetSenderDto>();
             CreateMap<Receiver, GetSenderDto>();
+            CreateMap<CreateSenderDto, Sender>();
         }
     }
 }

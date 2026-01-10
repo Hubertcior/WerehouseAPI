@@ -23,7 +23,7 @@ namespace WerehouseAPI.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<GetPackageDto>> GetById(int id)
         {
-            var package = await _repository.GetAllAsync();
+            var package = await _repository.GetByIdAsync(id);
 
             if (package == null) return NotFound();
 
