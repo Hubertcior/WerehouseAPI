@@ -1,6 +1,10 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using WerehouseAPI.Data;
+using WerehouseAPI.Dtos;
 using WerehouseAPI.Repositories;
+using WerehouseAPI.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +18,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IPackageRepository, PackageRepository>();
 builder.Services.AddScoped<ISenderRepository, SenderRepository>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<CreateSenderDtoValidator>();
 
 
 builder.Services.AddDbContext<AppDbContext>(o =>
