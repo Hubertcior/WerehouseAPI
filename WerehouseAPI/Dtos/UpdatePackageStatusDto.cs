@@ -5,7 +5,6 @@ namespace WerehouseAPI.Dtos
 {
     public class UpdatePackageStatusDto
     {
-        [Required]
         public int NewStatusId { get; set; }
     }
 }
